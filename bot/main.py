@@ -27,16 +27,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def post_init(application: Application) -> None:
-    await database.init_db()
-    logger.info("Database initialized")
-
-
 def main() -> None:
     app = (
         Application.builder()
         .token(config.BOT_TOKEN)
-        .post_init(post_init)
         .build()
     )
 
@@ -63,6 +57,8 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     async def _run() -> None:
+        await database.init_db()
+        logger.info("Database initialized")
         async with app:
             await app.start()
             # Now the app is running, create_task is safe
