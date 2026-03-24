@@ -1,7 +1,10 @@
+import logging
 import os
 import time
 import aiosqlite
 from bot import config
+
+logger = logging.getLogger(__name__)
 
 _db_path = config.DB_PATH
 
@@ -54,6 +57,33 @@ async def init_db() -> None:
                 value TEXT NOT NULL
             );
         """)
+
+        # Migration: if old transactions table lacks 'id' column, recreate it
+        cursor = await db.execute("PRAGMA table_info(transactions)")
+        columns = {row[1] for row in await cursor.fetchall()}
+        if "id" not in columns:
+            logger.info("Migrating transactions table: adding 'id' column...")
+            await db.executescript("""
+                ALTER TABLE transactions RENAME TO _transactions_old;
+                CREATE TABLE transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tx_id TEXT UNIQUE NOT NULL,
+                    tx_type TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    from_addr TEXT NOT NULL,
+                    to_addr TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL,
+                    trx_fee REAL,
+                    purpose TEXT,
+                    assigned_by INTEGER,
+                    assigned_by_nickname TEXT,
+                    completed INTEGER DEFAULT 0
+                );
+                INSERT INTO transactions (tx_id, tx_type, amount, from_addr, to_addr, timestamp, trx_fee, purpose, assigned_by, assigned_by_nickname, completed)
+                    SELECT tx_id, tx_type, amount, from_addr, to_addr, timestamp, trx_fee, purpose, assigned_by, assigned_by_nickname, completed
+                    FROM _transactions_old;
+                DROP TABLE _transactions_old;
+            """)
 
         # Seed admins
         for admin_id in config.ADMIN_IDS:
