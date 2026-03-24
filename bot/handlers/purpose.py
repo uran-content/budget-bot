@@ -14,11 +14,11 @@ async def claim_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     query = update.callback_query
     await query.answer()
 
-    tx_id = query.data.replace("claim:", "")
+    row_id = int(query.data.replace("claim:", ""))
     user = query.from_user
 
     # Check if already completed
-    tx = await database.get_transaction(tx_id)
+    tx = await database.get_transaction_by_id(row_id)
     if not tx:
         await query.answer("❌ Транзакция не найдена.", show_alert=True)
         return
@@ -28,11 +28,11 @@ async def claim_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     # Store awaiting state
-    context.user_data["awaiting_purpose_tx_id"] = tx_id
+    context.user_data["awaiting_purpose_tx_id"] = tx["tx_id"]
 
     # Edit this user's message to ask for purpose
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("❌ Я не совершал эту транзакцию", callback_data=f"unclaim:{tx_id}")]
+        [InlineKeyboardButton("❌ Я не совершал эту транзакцию", callback_data=f"unclaim:{row_id}")]
     ])
 
     text = (
@@ -49,18 +49,18 @@ async def unclaim_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
 
-    tx_id = query.data.replace("unclaim:", "")
+    row_id = int(query.data.replace("unclaim:", ""))
 
     # Clear awaiting state
     context.user_data.pop("awaiting_purpose_tx_id", None)
 
     # Restore original spending notification
-    tx = await database.get_transaction(tx_id)
+    tx = await database.get_transaction_by_id(row_id)
     if not tx:
         return
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✋ Я совершил эту транзакцию", callback_data=f"claim:{tx_id}")]
+        [InlineKeyboardButton("✋ Я совершил эту транзакцию", callback_data=f"claim:{row_id}")]
     ])
 
     text = format_tx_message(tx, include_purpose=True)

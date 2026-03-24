@@ -19,7 +19,8 @@ async def init_db() -> None:
     try:
         await db.executescript("""
             CREATE TABLE IF NOT EXISTS transactions (
-                tx_id TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tx_id TEXT UNIQUE NOT NULL,
                 tx_type TEXT NOT NULL,
                 amount REAL NOT NULL,
                 from_addr TEXT NOT NULL,
@@ -254,6 +255,19 @@ async def get_transaction(tx_id: str) -> dict | None:
     try:
         cursor = await db.execute(
             "SELECT * FROM transactions WHERE tx_id=?", (tx_id,)
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        await db.close()
+
+
+async def get_transaction_by_id(row_id: int) -> dict | None:
+    """Get a transaction by its integer auto-increment id."""
+    db = await _get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT * FROM transactions WHERE id=?", (row_id,)
         )
         row = await cursor.fetchone()
         return dict(row) if row else None

@@ -26,8 +26,8 @@ async def notify_all_users(bot: Bot, tx: dict) -> None:
         if tx["tx_type"] == "out" and not tx.get("completed"):
             reply_markup = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
-                    "✋ Я совершил эту транзакцию",
-                    callback_data=f"claim:{tx['tx_id']}"
+                    "\u270b Я совершил эту транзакцию",
+                    callback_data=f"claim:{tx['id']}"
                 )]
             ])
 

@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 async def post_init(application: Application) -> None:
     await database.init_db()
     logger.info("Database initialized")
+
+
+async def post_start(application: Application) -> None:
     application.create_task(monitor.monitor_loop(application))
     logger.info("Monitor loop started")
 
@@ -38,6 +41,7 @@ def main() -> None:
         Application.builder()
         .token(config.BOT_TOKEN)
         .post_init(post_init)
+        .post_start(post_start)
         .build()
     )
 
