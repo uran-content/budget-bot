@@ -29,17 +29,49 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         started=True,
     )
 
-    await update.message.reply_text(
-        f"👋 Добро пожаловать, {nickname}!\n\n"
-        "Я буду уведомлять вас о транзакциях USDT на отслеживаемом адресе.\n\n"
-        "Доступные команды:\n"
-        "/stats — статистика (только для админов)\n"
-        "/users — список пользователей (только для админов)\n"
-        "/adduser — добавить пользователя (только для админов)\n"
-        "/removeuser — удалить пользователя (только для админов)\n"
-        "/setaddress — сменить адрес (только для админов)\n"
-        "/help — показать это сообщение"
+    is_admin = db_user["is_admin"]
+
+    # --- Build the message ---
+
+    greeting = f"Привет, {nickname} 👋"
+
+    about = (
+        "Я слежу за USDT-кошельком и мгновенно сообщаю "
+        "обо всех входящих и исходящих переводах."
     )
+
+    how_it_works_lines = [
+        "💰 Пополнение — вы получите уведомление с суммой и деталями.",
+        "",
+        "💸 Списание — вы получите уведомление с кнопкой «Я совершил эту транзакцию».",
+        "Нажмите её, опишите цель перевода — и транзакция будет закрыта.",
+    ]
+    how_it_works = "\n".join(how_it_works_lines)
+
+    commands_lines = ["/help — показать эту справку"]
+    if is_admin:
+        commands_lines = [
+            "/stats — баланс, траты и последние транзакции",
+            "/users — список пользователей бота",
+            "/adduser <id> <ник> — добавить пользователя",
+            "/removeuser <id> — удалить пользователя",
+            "/setaddress <адрес> — сменить отслеживаемый кошелёк",
+            "/help — показать эту справку",
+        ]
+    commands = "\n".join(commands_lines)
+
+    parts = [
+        greeting,
+        about,
+        f"⚙️ Как это работает\n\n{how_it_works}",
+    ]
+
+    if is_admin:
+        parts.append(f"🛠 Команды администратора\n\n{commands}")
+    else:
+        parts.append(f"📋 Команды\n\n{commands}")
+
+    await update.message.reply_text("\n\n".join(parts))
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
