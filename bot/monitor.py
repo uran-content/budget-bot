@@ -57,6 +57,19 @@ async def _poll_once(application: Application) -> None:
         amount = raw_amount / (10 ** config.USDT_DECIMALS)
         block_ts = raw_tx.get("block_timestamp", 0)
 
+        # Skip bogus transactions with absurd amounts (e.g. uint256 max from
+        # malicious contracts). USDT total supply is ~10^11, so anything above
+        # 10^12 is certainly garbage and would corrupt our stats.
+        if amount > 1e12:
+            logger.warning(
+                "Skipping bogus transaction %s with amount %s USDT",
+                tx_id[:16],
+                amount,
+            )
+            if block_ts > max_ts:
+                max_ts = block_ts
+            continue
+
         # Determine type
         tx_type = "in" if to_addr.lower() == address.lower() else "out"
 

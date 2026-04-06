@@ -85,6 +85,29 @@ async def init_db() -> None:
                 DROP TABLE _transactions_old;
             """)
 
+        # One-time migration: remove bogus transactions with absurd amounts
+        # (e.g. uint256-max values from malicious contracts that polluted stats).
+        cursor = await db.execute(
+            "SELECT value FROM settings WHERE key='bogus_tx_cleanup_done'"
+        )
+        if not await cursor.fetchone():
+            cursor = await db.execute(
+                "SELECT COALESCE(SUM(amount), 0) AS s, COUNT(*) AS c "
+                "FROM transactions WHERE amount > 1e12"
+            )
+            row = await cursor.fetchone()
+            bogus_sum, bogus_count = row["s"], row["c"]
+            if bogus_count:
+                await db.execute("DELETE FROM transactions WHERE amount > 1e12")
+                logger.warning(
+                    "Bogus tx cleanup: removed %d transaction(s) totalling %s USDT",
+                    bogus_count,
+                    bogus_sum,
+                )
+            await db.execute(
+                "INSERT INTO settings (key, value) VALUES ('bogus_tx_cleanup_done', '1')"
+            )
+
         # Seed admins
         for admin_id in config.ADMIN_IDS:
             await db.execute(
